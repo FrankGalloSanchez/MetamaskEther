@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { ethers } from 'ethers'; // Ahora se importa ethers como un solo objeto
-// No necesitas importar 'providers' o 'utils' de manera separada
+import { ethers } from 'ethers';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const MetaMaskContext = createContext();
 
@@ -15,25 +16,27 @@ export const MetaMaskProvider = ({ children }) => {
 
   useEffect(() => {
     if (window.ethereum) {
-      const tempProvider = new ethers.providers.Web3Provider(window.ethereum); // Utilizamos el proveedor de ethers directamente
+      const tempProvider = new ethers.providers.Web3Provider(window.ethereum);
       setProvider(tempProvider);
 
-      window.ethereum.request({ method: 'eth_requestAccounts' })
-        .then(accounts => {
+      window.ethereum
+        .request({ method: 'eth_requestAccounts' })
+        .then((accounts) => {
           setAccount(accounts[0]);
+          toast.success('MetaMask conectado con éxito');
           getBalance(accounts[0], tempProvider);
         })
         .catch((error) => {
-          console.error('User rejected the request');
+          toast.error('Usuario rechazó la solicitud de conexión');
         });
     } else {
-      alert('MetaMask no está instalado. Por favor, instálalo.');
+      toast.error('MetaMask no está instalado. Por favor, instálalo.');
     }
   }, []);
 
   const getBalance = async (account, tempProvider) => {
     const balance = await tempProvider.getBalance(account);
-    setBalance(ethers.utils.formatEther(balance)); // Se usa ethers.utils.formatEther
+    setBalance(ethers.utils.formatEther(balance));
   };
 
   const sendTransaction = async (recipient, amount) => {
@@ -41,15 +44,16 @@ export const MetaMaskProvider = ({ children }) => {
       const signer = provider.getSigner();
       const tx = {
         to: recipient,
-        value: ethers.utils.parseEther(amount), // Se usa ethers.utils.parseEther
+        value: ethers.utils.parseEther(amount),
       };
 
       try {
         const transactionResponse = await signer.sendTransaction(tx);
-        await transactionResponse.wait(); // Esperar a que la transacción sea confirmada
-        alert('Transacción completada!');
+        toast.info('Enviando transacción...');
+        await transactionResponse.wait();
+        toast.success('Transacción completada con éxito!');
       } catch (error) {
-        alert('Error al enviar la transacción');
+        toast.error('Error al enviar la transacción');
       }
     }
   };
@@ -57,6 +61,7 @@ export const MetaMaskProvider = ({ children }) => {
   return (
     <MetaMaskContext.Provider value={{ account, balance, sendTransaction }}>
       {children}
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
     </MetaMaskContext.Provider>
   );
 };
